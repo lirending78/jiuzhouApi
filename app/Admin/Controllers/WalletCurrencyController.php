@@ -21,6 +21,7 @@ class WalletCurrencyController extends AdminController
     {
         return Grid::make(new WalletCurrency(), function (Grid $grid) {
             $grid->column('name');
+            $grid->column('icon','图标')->image('', 50, 50);
             $grid->column('status_recharge')->switch();
             $grid->column('status_withdrawal')->switch();
             $grid->qrcode->qrcode(function () {
@@ -67,6 +68,7 @@ class WalletCurrencyController extends AdminController
     {
         return Form::make(new WalletCurrency(), function (Form $form) {
             $form->text('name');
+            $form->photo('icon', '图标');
             $form->list('network');
             $form->switch('status_recharge');
             $form->switch('status_withdrawal');

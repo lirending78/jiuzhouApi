@@ -34,7 +34,13 @@ class AuthService extends BaseService{
         if (admin_setting('invitation_code') == 1){
             //需要邀请码 //判断邀请码是否存在
             if (!isset($data['invitation_code']) || $data['invitation_code'] == '') {
-                throw new \Exception('邀请码不能为空');
+                throw new \Exception('邀请码错误');
+            }
+        }
+        if($data['invitation_code']){
+            $invitation_user = User::query()->where('user_code', $data['invitation_code'])->first();
+            if(!$invitation_user){
+                throw new \Exception('邀请码错误');
             }
         }
         $model->user_mobile = $data['user_mobile'];

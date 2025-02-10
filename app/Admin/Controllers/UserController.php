@@ -4,6 +4,7 @@ namespace App\Admin\Controllers;
 
 use App\Admin\Actions\Agent\LoginAsAgent;
 use App\Admin\Actions\Agent\OpenAgent;
+use App\Admin\Actions\UserSetting;
 use App\Admin\Renderable\NetWork;
 use App\Admin\Renderable\UserWallet;
 use App\Admin\Repositories\User;
@@ -114,9 +115,9 @@ class UserController extends AdminController
 //        $actions->append(new UserAuthentication($this->user_id));
 //    });
             //工具栏新新增 设置按钮 设置用户弹窗
-//    $grid->tools(function (Grid\Tools $tools) {
-//        $tools->append('<button class="btn btn-primary  filter-btn-XcIPugNG btn-outline feather  icon-settings">'.new UserSetting().'</button>');
-//    });
+    $grid->tools(function (Grid\Tools $tools) {
+        $tools->append('<button class="btn btn-primary  filter-btn-XcIPugNG btn-outline feather  icon-settings">'.new UserSetting().'</button>');
+    });
             $grid->filter(function (Grid\Filter $filter) use ($user_type) {
                 $filter->panel();
                 $filter->like('user_name')->width(3);
