@@ -1,0 +1,13 @@
+._select2_seo .select2-selection__choice{
+    position: relative;
+    margin-right: 5px;
+}
+._select2_seo .select2-selection__choice:after{
+    content: '-';
+    position: absolute;
+    right: -8px;
+    color: #000;
+}
+._select2_seo .select2-selection__choice:last-child:after{
+    content: '';
+}

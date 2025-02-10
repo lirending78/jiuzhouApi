@@ -1,0 +1,13 @@
+[2024-11-14 09:30:44] local.INFO: route 【api/financial/Recharge】 total 2270ms  
+[2024-11-14 09:30:55] local.INFO: route 【api/Login】 total 3900ms  
+[2024-11-14 09:31:16] local.INFO: route 【api/financial/Recharge】 total 410ms  
+[2024-11-14 09:31:29] local.INFO: route 【api/financial/Recharge】 total 20ms  
+[2024-11-14 09:36:55] local.INFO: route 【api/financial/Recharge】 total 20ms  
+[2024-11-14 09:38:22] local.INFO: route 【api/financial/Recharge】 total 80ms  
+[2024-11-14 09:38:31] local.INFO: route 【api/financial/Recharge】 total 30ms  
+[2024-11-14 09:39:01] local.INFO: route 【api/financial/Recharge】 total 40ms  
+[2024-11-14 09:46:48] local.INFO: route 【api/financial/Recharge】 total 30ms  
+[2024-11-14 09:51:36] local.INFO: route 【api/financial/Recharge】 total 60ms  
+[2024-11-14 09:52:02] local.INFO: route 【api/financial/Recharge】 total 50ms  
+[2024-11-14 09:58:18] local.INFO: route 【api/financial/Recharge】 total 70ms  
+[2024-11-14 09:59:04] local.INFO: route 【api/financial/Recharge】 total 40ms  

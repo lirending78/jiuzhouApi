@@ -1,0 +1,12 @@
+[2024-11-11 16:39:42] local.INFO: route 【api/register】 total 420ms  
+[2024-11-11 16:41:21] local.INFO: route 【api/Login】 total 2040ms  
+[2024-11-11 16:41:31] local.INFO: route 【api/Login】 total 420ms  
+[2024-11-11 16:42:05] local.INFO: route 【api/Login】 total 280ms  
+[2024-11-11 16:43:04] local.INFO: route 【api/Login】 total 270ms  
+[2024-11-11 16:43:38] local.INFO: route 【api/Login】 total 280ms  
+[2024-11-11 16:43:53] local.INFO: route 【api/Login】 total 390ms  
+[2024-11-11 16:43:59] local.INFO: route 【api/Login】 total 260ms  
+[2024-11-11 16:44:11] local.INFO: route 【api/ForgetPassword】 total 270ms  
+[2024-11-11 16:44:20] local.INFO: route 【api/Login】 total 260ms  
+[2024-11-11 16:44:49] local.INFO: route 【api/Login】 total 920ms  
+[2024-11-11 16:49:07] local.INFO: route 【api/register】 total 510ms  

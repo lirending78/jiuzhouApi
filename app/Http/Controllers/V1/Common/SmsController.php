@@ -1,0 +1,159 @@
+<?php
+
+namespace App\Http\Controllers\V1\Common;
+
+use App\Http\Controllers\BaseController;
+use App\Http\Requests\Common\SmsRequest;
+use App\Http\Services\Common\EmailService;
+use App\Http\Services\Common\SmsChannelSwitcher;
+use App\Http\Services\Common\SmsService;
+use App\Http\Services\User\UserService;
+use App\Lib\Notification\Sms;
+use Exception;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Redis;
+use Log;
+
+class SmsController extends BaseController
+{
+
+
+    /**
+     * 获取短信验证码
+     *
+     * @param SmsRequest $request
+     * @param UserService $service
+     * @return JsonResponse
+     * @author fable
+     */
+    public function getMessageCode(SmsRequest $request, UserService $service): JsonResponse
+    {
+        try {
+            $mobile = $request->get('mobile');
+            $message_type = $request->get('message_type');
+            // 验证失败，直接在各自方法里面返回
+            match ($message_type) {
+                'signup', 'reset_password', 'forgot_password', 'get_current_msg_code',
+                'get_new_msg_code', 'login' => $this->{assemble_func_name($message_type)}(
+                    $mobile, $service
+                ),
+                'realname_auth' => true,
+            };
+            // 重新获取删除之前的错误次数
+//            OauthCache::delCodeErrorTimes($mobile, $message_type);
+            // 初始化 SmsChannelSwitcher
+
+            $smsChannelSwitcher = new SmsChannelSwitcher($mobile, $message_type);
+
+            // 获取通道和验证码
+            list($channel, $msg_code) = $smsChannelSwitcher->getChannelAndCode();
+            // 发送短信验证码
+            if (!Sms::send($mobile, $msg_code, $channel)) {
+                throw new \Exception(trans('codes.10023'), 10023);
+            }
+            // 如果后台开启了同时发布验证码状态。
+
+            if ($message_type == 'signup' && config('base_emails_status') == '1') {
+                $subject = '您的验证码';
+                $content = "尊敬的用户，您的验证码为：{$msg_code}。";
+                (new EmailService)->sendMail(
+                    $request->get('email'),
+                    $subject,
+                    'emails.test', // 假设有一个邮件视图 `resources/views/emails/test.blade.php`
+                    ['name' => $content]
+                );
+            }
+            $smsChannelSwitcher->updateUsedChannels($channel);
+            return $this->success(msg: trans('codes.10020'));
+        } catch (\Exception $e) {
+            return $this->fail([], $e->getMessage());
+        } finally {
+            if (isset($message_code)) {
+                $request->offsetSet('message_code', $message_code);
+            }
+            Log::info(
+                '获取验证码(' . $request->get('message_type') . ')',
+                $this->logBody($e ?? null, $request)
+            );
+            $request->offsetUnset('message_code');
+        }
+    }
+
+    /**
+     * 短信快速登录
+     * @param string $mobile
+     * @param int $is_enterprise
+     * @param object $service
+     * @return bool
+     * @throws Exception
+     */
+    public function login(string $mobile, object $service): bool
+    {
+        // 是否已经注册
+//        if ( !$service->memberExistsByMobile($mobile)) {
+//            throw new \Exception(trans('codes.10003'), 10003);
+//        }
+        return true;
+    }
+
+    /**
+     * 注册时
+     *
+     * @param string $mobile
+     * @param int $is_enterprise
+     * @param object $service
+     * @return bool
+     * @throws
+     * @author fable
+     */
+    public function signup(string $mobile, object $service): bool
+    {
+        // 是否已经注册
+//        if ($service->memberExistsByMobile($mobile)) {
+//            throw new \Exception(trans('codes.10001'), 10001);
+//        }
+
+        return true;
+    }
+
+    /**
+     * 发送邮箱验证短信
+     * @param SmsRequest $request
+     * @param UserService $service
+     * @return JsonResponse
+     */
+    public function sendEmailSms(SmsRequest $request, UserService $service)
+    {
+        $code = gen_message_code();
+//        $phone = $service->getMemberById($request->offsetGet('member_id'))['mobile'];
+        $phone = $request->get('member_id');
+        $subject = '您的验证码';
+        $content = "尊敬的用户，您的验证码为：{$code}。";
+        $res = (new EmailService)->sendMail(
+            $request->get('email'),
+            $subject,
+            'emails.test', // 假设有一个邮件视图 `resources/views/emails/test.blade.php`
+            ['name' => $content]
+        );
+        if ($res) {
+            Redis::setex('email_common_' . $phone, 600, $code);
+            return $this->success();
+        }
+        return $this->fail([], '短信发送失败');
+    }
+
+    /**
+     * @param SmsRequest $request
+     * @return JsonResponse
+     */
+    public function checkCodes(SmsRequest $request, SmsService $service): JsonResponse
+    {
+        $mobile = $request->get('phone');
+        $message_code = $request->get('code');
+        $type = $request->get('type');
+        if ($service->checkCode($mobile, $message_code, $type)) {
+            return $this->success(); // TODO: Change the autogenerated stub
+        }
+        return $this->fail([], '验证码错误');
+    }
+}
