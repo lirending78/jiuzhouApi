@@ -103,7 +103,6 @@ class OrdersService extends BaseService
         ]);
         $sellOrderDetails = (new C2cMatchingService())->getOrdersDetails($sellOrders);
         $buyOrderDetails = (new C2cMatchingService())->getOrdersDetails($buyOrders);
-
         $fields = ['unit_price', 'total_price', 'remaining_amount', 'updated_at'];
         // 返回过滤后的数据
         return [

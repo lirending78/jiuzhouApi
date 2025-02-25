@@ -41,6 +41,7 @@ class UserController extends AdminController
             $grid->async();
             $grid->withBorder();
 //            $grid->column('uuid')->sortable();
+            $grid->column('user_mail');
             $grid->column('user_name');
             $grid->column('real_name');
             $grid->column('status')->switch();
@@ -72,7 +73,6 @@ class UserController extends AdminController
                     ->button("<button class='btn btn-primary btn-sm'>查看</button>");
             });
 
-//    $grid->column('user_mail');
 //    $grid->column('user_mobile');
 //    $grid->column('real_name_authority')->using([1=>'通过',0=>'未认证'])->label([1=>'green',2=>'orange']);
 //
