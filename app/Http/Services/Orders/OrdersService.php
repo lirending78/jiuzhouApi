@@ -46,7 +46,7 @@ class OrdersService extends BaseService
         ];
         $timeScore = now()->timestamp;
         $order = C2cOrderModel::create($insert);
-// 根据委托类型设置分数计算逻辑
+            // 根据委托类型设置分数计算逻辑
         if ($entrust_type === 'buy') {
             // 买单：价格从高到低，价格相同时按时间升序
             $priceScore = $insert['unit_price'] * 1e6; // 放大价格作为主权重
@@ -57,9 +57,14 @@ class OrdersService extends BaseService
             $score = $priceScore + $timeScore; // 价格越低、时间越早分数越小
         }
         // 将订单信息添加到 Redis 有序集合，按价格时间 排序
-        Redis::zAdd("c2c_orders:{$entrust_type}:{$order['currency']}", $score, $order->order_no);
         // 将订单库存存入 Redis，以订单编号作为主键
-        Redis::hSet(ORDER_INVENTORY, $order['order_no'], $order['remaining_amount']);
+
+        try {
+            Redis::zAdd("c2c_orders:{$entrust_type}:{$order['currency']}", $score, $order->order_no);
+            Redis::hSet(ORDER_INVENTORY, $order['order_no'], $order['remaining_amount']);
+        }catch (Exception $e){
+            throw new \Exception("Failed to add order to Redis: " . $e->getMessage());
+        }
 
     }
 //

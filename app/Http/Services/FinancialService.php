@@ -9,6 +9,7 @@ use App\Models\Financial\RechargeRecord;
 use App\Models\Financial\TransactionFlow;
 use App\Models\User\UserWallet;
 use App\Http\Services\Financial\FinancialService as Service;
+use App\Services\MarketService;
 use Illuminate\Support\Facades\DB;
 use Opcodes\LogViewer\Logs\Log;
 use Tymon\JWTAuth\Contracts\Providers\Auth;
@@ -23,7 +24,15 @@ class FinancialService extends BaseService
     //用户钱包列表
     public function WalletList($data)
     {
-        $list = UserWallet::query()->where('user_id',auth()->user()->user_id)->get()->toArray();
+        $list = UserWallet::query()
+            ->where('user_id',auth()->user()->user_id)
+            ->get()
+            ->transform(function ($item) {
+                //折合usdt
+                $item->usdt = $item->money * (new MarketService())->getPrice($item->currency);
+                return $item;
+            })
+            ->toArray();
         return $list;
     }
 
@@ -226,6 +235,25 @@ class FinancialService extends BaseService
         $list = TransactionFlow::query()->where('user_id', $user_id)->orderBy('created_at')->where('currency', $current)->get()->toArray();
         return $list;
     }
+    //币种余额
+    public function CurrencyBalance($data)
+    {
+        $data->validate([
+            'currency' => 'required',
+        ],[
+            'currency.required' => '请选择币种',
+        ]);
+
+        $user_id = auth()->user()->user_id;
+        $current  = $data['currency'];
+        $wallet = UserWallet::query()->where('user_id', $user_id)->where('currency', $current)->first();
+        if (!$wallet) {
+            return 0;
+        }
+        return $wallet->money;
+    }
+
+
 
 
 

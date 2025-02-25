@@ -22,3 +22,7 @@ Route::prefix('user')->middleware(['api','jwt' /*'sign','auth.api.token'*/])->gr
 
     Route::post('test', [AuthController::class, 'test'])->name('test1111');
 });
+Route::prefix('account')->middleware(['api','jwt' /*'sign','auth.api.token'*/])->group(function () {
+    Route::post('get-balance', [AuthController::class, 'GetBalance'])->name('get-balance');
+
+});

@@ -7,7 +7,7 @@ use App\Models\BaseModel;
 class CurrencyModel extends BaseModel
 {
 
-    protected $table = 'currencies';
+    protected $table = 'currency';
 
     protected $primaryKey = 'uuid';
     protected $fillable = [

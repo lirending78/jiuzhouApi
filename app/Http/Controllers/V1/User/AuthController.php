@@ -5,6 +5,8 @@ namespace App\Http\Controllers\V1\User;
 use App\Http\Controllers\BaseController;
 use App\Http\Requests\User\Member\MemberRequest;
 use App\Http\Services\AuthService;
+use App\Http\Services\FinancialService;
+use App\Http\Services\User\UserService;
 
 class AuthController extends BaseController
 {
@@ -121,6 +123,25 @@ class AuthController extends BaseController
         }catch (\Exception $e){
             return $this->fail([],$e->getMessage());
         }
+    }
+
+    //获取账户余额
+    public function GetBalance(MemberRequest $request)
+    {
+        try {
+            $currency = $request->input('symbol');
+            //如果有/ 则取前面部分
+            if (strpos($currency, '/') !== false) {
+                $currency = explode('/', $currency)[0];
+            }
+            $request['currency'] = $currency;
+            //获取用户余额
+            $balance = (new FinancialService())->CurrencyBalance($request);
+            return $this->success(['available' => $balance]);
+        }catch (\Exception $e){
+            return $this->fail([],$e->getMessage());
+        }
+
     }
 
 }

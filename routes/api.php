@@ -10,6 +10,7 @@ require_once 'Common/routes-api.php';
 require_once 'Orders/routes-api.php';
 require_once 'news/routes-api.php';
 require_once 'financial/routes-api.php';
+require_once 'Market/routes-api.php';
 
 /*
 |--------------------------------------------------------------------------

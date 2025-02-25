@@ -30,12 +30,12 @@ class TradingPairController extends AdminController
             $grid->column('base_currency')->display(function ($row){
                 return CurrencyModel::query()
                     ->where('uuid', $row)
-                    ->value('symbol');
+                    ->value('name');
             });
             $grid->column('quote_currency')->display(function ($row){
                 return CurrencyModel::query()
                     ->where('uuid', $row)
-                    ->value('symbol');
+                    ->value('name');
             });
             $grid->column('trading_pair_categories')->display(function ($row) {
                 return TradingPairCategoryModel::query()
@@ -108,14 +108,14 @@ class TradingPairController extends AdminController
     {
         return Form::make(new TradingPair, function (Form $form) {
             $form->display('uuid');
-            $form->image('symbol_url')->uniqueName()->autoUpload()->required();
+            $form->photo('symbol_url');
             $form->select('base_currency')
-                ->options(CurrencyModel::all()->pluck('symbol', 'uuid'))
+                ->options(CurrencyModel::all()->pluck('name', 'uuid'))
                 ->required();
 
             // 计价币种
             $form->select('quote_currency')
-                ->options(CurrencyModel::all()->pluck('symbol', 'uuid'))
+                ->options(CurrencyModel::all()->pluck('name', 'uuid'))
                 ->required();
             $form->select('trading_pair_categories')->options(function () {
                 return TradingPairCategoryModel::query()
@@ -135,7 +135,7 @@ class TradingPairController extends AdminController
 
             $form->saving(function ($form) {
                 // 在保存之前动态生成 symbol 字段的值
-                $form->symbol = CurrencyModel::query()->where('uuid',$form->base_currency)->value('symbol')  . '/' . CurrencyModel::query()->where('uuid',$form->quote_currency)->value('symbol');
+                $form->symbol = CurrencyModel::query()->where('uuid',$form->base_currency)->value('name')  . '/' . CurrencyModel::query()->where('uuid',$form->quote_currency)->value('name');
                 // 仅在创建时进行验证
                 if (!$form->isEditing()) {
                     // 验证是否已有相同的交易对

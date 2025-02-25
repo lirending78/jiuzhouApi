@@ -15,12 +15,13 @@ return [
     |
     */
 
-    'supports_credentials' => false,
-    'allowed_origins' => ['*'],  // 允许所有来源
-    'allowed_methods' => ['*'],  // 允许所有 HTTP 方法
-    'allowed_headers' => ['*'],  // 允许所有请求头
+    'paths' => ['api/*'], // 只允许 API 跨域
+    'allowed_methods' => ['*'], // 允许所有请求方法
+    'allowed_origins' => ['*'], // 允许所有来源
+    'allowed_origins_patterns' => [],
+    'allowed_headers' => ['*'], // 允许所有请求头
     'exposed_headers' => [],
     'max_age' => 0,
-    'paths' => ['*'],
+    'supports_credentials' => false,
 
 ];
