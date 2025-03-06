@@ -409,3 +409,36 @@ function sendwlDingDingMsg($message): mixed
     $result = curlPost($webhook, $data_string);
     return json_decode($result['content'], true);
 }
+
+// 如果大于0  去除尾部多余的0  如果等于0 直接返回0.0 如果是整数 保留两位小数
+function remove_zero_tail($num): string
+{
+    // 将输入转换为字符串
+    $num = (string)$num;
+
+    // 处理 0 的情况
+    if ($num == '0') {
+        return '0.0';
+    }
+
+    // 检查是否包含小数点
+    if (strpos($num, '.') !== false) {
+        // 分离整数部分和小数部分
+        list($integerPart, $decimalPart) = explode('.', $num);
+
+        // 去除小数部分末尾的零
+        $decimalPart = rtrim($decimalPart, '0');
+
+        // 如果小数部分为空，则只返回整数部分
+        if (empty($decimalPart)) {
+            return $integerPart . '.0';
+        }
+
+        // 返回处理后的结果
+        return $integerPart . '.' . $decimalPart;
+    }
+
+    // 如果没有小数点，直接返回
+    return $num;
+}
+

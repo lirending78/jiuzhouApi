@@ -69,5 +69,6 @@ class Kernel extends HttpKernel
     protected $routeMiddleware = [
         // 其他中间件
         'jwt' => \App\Http\Middleware\JwtMiddleware::class,
+        'realname' => \App\Http\Middleware\Realname::class,
     ];
 }

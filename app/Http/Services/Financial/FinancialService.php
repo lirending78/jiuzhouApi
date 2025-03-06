@@ -27,33 +27,40 @@ class FinancialService extends BaseService
         }
         //获取用户此类币种钱包
        //获取钱包uuid
-        $wallet_uiud = $this->GetWalletUuidByUserId($recharge->user_id,$recharge->recharge_type);
-        //钱包充值
-        $wallet = UserWallet::query()->where('uuid', $wallet_uiud)->first();
-        $wallet->money = $wallet->money + $recharge->num;
-        if ($wallet->save()) {
-            //交易流水
-            $model = new TransactionFlow();
-            $model->user_id = $recharge->user_id;
-            $model->transaction_no = $recharge->recharge_order_number;
-            $model->amount = $recharge->num;
-            $model->currency = strtoupper($recharge->recharge_type);
-            $model->transaction_type = 'deposit';
-            $model->status = 'completed';
-            $model->payment_method = 'Manual recharge';
-            $model->save();
-
-            Log::channel('wallet')->info('用户往'.strtoupper($recharge->recharge_type).'充值了'.$recharge->num, [
-                'data' => json_encode([
-                    'num'=> $recharge->num,
-                ]),
-                'phone' => (new UserService())->GetUserMobile($recharge->user_id),
-                'ip' => (new UserService())->GetIp(),
-            ]);
-            return true;
-        }else{
-            throw new \Exception('充值失败');
+        try {
+            $this->ChangeUserMoney($recharge->user_id, strtoupper($recharge->recharge_type), $recharge->num, '', 'add', 'deposit');
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
         }
+
+        Log::channel('wallet')->info('用户往'.strtoupper($recharge->recharge_type).'充值了'.$recharge->num, [
+            'data' => json_encode([
+                'num'=> $recharge->num,
+            ]),
+            'phone' => (new UserService())->GetUserMobile($recharge->user_id),
+            'ip' => (new UserService())->GetIp(),
+        ]);
+        return true;
+//        $wallet_uiud = $this->GetWalletUuidByUserId($recharge->user_id,$recharge->recharge_type);
+//        //钱包充值
+//        $wallet = UserWallet::query()->where('uuid', $wallet_uiud)->first();
+//        $wallet->money = $wallet->money + $recharge->num;
+//        if ($wallet->save()) {
+//            //交易流水
+//            $model = new TransactionFlow();
+//            $model->user_id = $recharge->user_id;
+//            $model->transaction_no = $recharge->recharge_order_number;
+//            $model->amount = $recharge->num;
+//            $model->currency = strtoupper($recharge->recharge_type);
+//            $model->transaction_type = 'deposit';
+//            $model->status = 'completed';
+//            $model->payment_method = 'Manual recharge';
+//            $model->save();
+//
+//            return true;
+//        }else{
+//            throw new \Exception('充值失败');
+//        }
 
     }
 
@@ -176,7 +183,76 @@ class FinancialService extends BaseService
         return \App\Models\Financial\Currency::query()->get();
     }
 
+    //获取用户账户总金额
+    public function GetUserAccountMoney($user_id)
+    {
+        $money = 0;
+        $wallets = UserWallet::query()->where('user_id', $user_id)->get();
+        foreach ($wallets as $v){
+            $money += $v->money;
+        }
+        return $money;
+    }
+    //币种数量判断是否余额充足
+    public function CheckCurrencyMoney($currency,$amount): bool
+    {
+        $user_id = auth()->user()->user_id;
+        $wallet = UserWallet::query()->where('user_id', $user_id)->where('currency', $currency)->first();
+        if ($wallet->money < $amount) {
+            return false;
+        }else{
+            return true;
+        }
+    }
 
+
+    //改变用户余额
+    public function ChangeUserMoney($user_id,$currency,$amount,$order_num = '',$type,$transaction_type,$flag = '')
+    {
+        $currency = strtoupper($currency);
+        $wallet = UserWallet::query()->where('user_id', $user_id)->where('currency', $currency)->first();
+        if(!$wallet){
+           $wallet =  $this->AddWalletByUserId($user_id,$currency);
+           $wallet = UserWallet::query()->where('uuid', $wallet)->where('currency', $currency)->first();
+        }
+        if ($type == 'add'){
+            $wallet->money = $wallet->money + $amount;
+        }else if ($type == 'reduce'){
+            $wallet->money = $wallet->money - $amount;
+        }else if ($type == 'freeze'){
+            //冻结金额  不写入交易流水
+            $wallet->money = $wallet->money - $amount;
+            $wallet->freeze_money = $wallet->freeze_money + $amount;
+
+        }elseif($type == 'cancel_freeze'){
+            $wallet->freeze_money = $wallet->freeze_money - $amount;
+            $wallet->money = $wallet->money + $amount;
+
+        }else if($type == 'reduce_freeze'){
+            $wallet->freeze_money = $wallet->freeze_money - $amount;
+        }else{
+            throw new \Exception('操作类型错误');
+        }
+        if ($wallet->save()) {
+            //交易流水
+            $model = new TransactionFlow();
+            $model->user_id =    $user_id;
+            $model->transaction_no = $order_num;
+            $model->amount = $amount;
+            $model->currency = strtoupper($currency);
+            $model->transaction_type = $transaction_type;
+            $model->status = 'completed';
+            $model->payment_method = 'Manual recharge';
+            $model->type = $type;
+            //交易后金额
+            $model->after_money = $wallet->money;
+            $model->save();
+        }else{
+            throw new \Exception('操作失败');
+        }
+
+
+    }
 
 
 }

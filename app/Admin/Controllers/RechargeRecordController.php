@@ -22,6 +22,8 @@ class RechargeRecordController extends AdminController
     {
         return Grid::make(new RechargeRecord(), function (Grid $grid) {
             $grid->column('user_id')->limit(5);
+            //倒叙
+            $grid->model()->orderBy('created_at', 'desc');
             $grid->column('recharge_type')->display(function ($value) {
                 return strtoupper($value);
             });

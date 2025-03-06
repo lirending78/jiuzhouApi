@@ -24,6 +24,7 @@ class TradingPairController extends AdminController
     {
         return Grid::make(new TradingPair, function (Grid $grid) {
             $grid->model()->orderBy('sort');
+            $grid->sortable('sort');
 //            $grid->column('uuid')->sortable();
             $grid->column('symbol');
             $grid->column('symbol_url')->image('', 60, 60);
@@ -48,7 +49,6 @@ class TradingPairController extends AdminController
             $grid->column('min_trade_price')->limit(5);
             $grid->column('max_trade_price')->limit(5);
             $grid->column('status')->switch();
-            $grid->column('sort')->orderable();
             $grid->column('created_at')->sortable();
 //            $grid->column('updated_at')->sortable();
 //                $grid->append(new OperateRelease());
@@ -58,6 +58,7 @@ class TradingPairController extends AdminController
             $grid->quickSearch(['symbol'])->placeholder('搜索交易对...');
 
             $grid->filter(function (Grid\Filter $filter) {
+                $filter->panel();
                 $filter->equal('uuid');
                 $filter->equal('symbol');
 //                $filter->like('user_type')->select(UserType::all()->pluck(['type'],'uuid')->toArray())->width(3);

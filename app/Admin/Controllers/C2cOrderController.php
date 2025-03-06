@@ -24,13 +24,14 @@ class C2cOrderController extends AdminController
             if (request()->has('entrust_type')) {
                 $grid->model()->where('entrust_type', request()->all()['entrust_type']);
             }
+            $grid->model()->orderBy('created_at', 'desc');
 
             $grid->column('order_no');
             $grid->column('user_id')->display(function (){
                 return User::query()->where('user_id',$this->user_id)->value('real_name');
             });
-            $grid->column('entrust_type')->using(['buy'=>'买入','sell'=>'卖出'])->label(['buy'=>'green','sell'=>'red']);
-            $grid->column('order_type')->label();
+            $grid->column('entrust_type','委托类型')->using(['buy'=>'买入','sell'=>'卖出'])->label(['buy'=>'green','sell'=>'red']);
+            $grid->column('order_type')->using(['DC'=>'数字货币','market'=>'市价单'])->label();
             $grid->column('amount');
             $grid->column('remaining_amount');
             $grid->column('total_price')->display(function (){

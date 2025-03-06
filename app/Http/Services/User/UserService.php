@@ -3,10 +3,13 @@
 namespace App\Http\Services\User;
 
 use App\Http\Services\BaseService;
+use App\Http\Services\Financial\FinancialService;
 use App\Models\Agent\AgentModel;
 use App\Models\User\User;
 use App\Models\User\UserAuthentication;
 use App\Models\User\UserNetwork;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Redis;
 use Ramsey\Uuid\Uuid;
 
 
@@ -123,6 +126,10 @@ class UserService extends BaseService
     public function login($user)
     {
         $token = auth('api')->login($user);
+        //存入redis 单点登录
+        Redis::set('LoginToken:'. $user->user_id, $token);
+        Redis::expire('LoginToken:'. $user->user_id, auth()->factory()->getTTL() * 60);
+        // 将用户在线状态存储到 Redis
         return [
             'access_token' => $token,
             'token_type' => 'bearer',
@@ -280,10 +287,18 @@ class UserService extends BaseService
     //获取用户信息
     public function getUserInfo()
     {
-        //获取当前域名
 
         $user = User::where('user_id', auth()->user()->user_id)
             ->get(['user_mobile','user_mail','user_name','avatar','real_name_authority'])
+            ->transform(function ($item) {
+                $total = 0;
+                $list =  (new \App\Http\Services\FinancialService())->WalletList($item->user_id);
+                foreach ($list as $v){
+                    $total += $v['usdt'];
+                }
+                $item['total'] = $total;
+                return $item;
+            })
             ->first();
 
         if ($user) {

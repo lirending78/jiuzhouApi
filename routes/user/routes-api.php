@@ -19,10 +19,18 @@ Route::prefix('user')->middleware(['api','jwt' /*'sign','auth.api.token'*/])->gr
     Route::post('GetAuthentication', [AuthController::class, 'GetAuthentication'])->name('get_authentication');
     Route::post('GetUserInfo', [AuthController::class, 'GetUserInfo'])->name('get_user_info');
     Route::post('Avatar', [AuthController::class, 'Avatar'])->name('avatar');
+    //添加提现地址
+    Route::post('AddWithdrawalAddress', [\App\Http\Controllers\V1\Financial\FinancialController::class, 'AddWithdrawalAddress'])->name('add_withdrawal_address');
+    Route::post('EditWithdrawalAddress', [\App\Http\Controllers\V1\Financial\FinancialController::class, 'EditWithdrawalAddress'])->name('edit_withdrawal_address');
+    Route::post('DelWithdrawalAddress', [\App\Http\Controllers\V1\Financial\FinancialController::class, 'DelWithdrawalAddress'])->name('del_withdrawal_address');
+    Route::post('WithdrawalAddressList', [\App\Http\Controllers\V1\Financial\FinancialController::class, 'WithdrawalAddressList'])->name('withdrawal_address_list');
+
 
     Route::post('test', [AuthController::class, 'test'])->name('test1111');
 });
 Route::prefix('account')->middleware(['api','jwt' /*'sign','auth.api.token'*/])->group(function () {
     Route::post('get-balance', [AuthController::class, 'GetBalance'])->name('get-balance');
+    //钱包明细
+    Route::post('wallet-records', [\App\Http\Controllers\V1\Financial\FinancialController::class, 'WalletDetail'])->name('wallet_records')->middleware('realname');
 
 });

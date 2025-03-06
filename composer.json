@@ -8,6 +8,7 @@
         "php": "^8.2",
         "ext-bcmath": "*",
         "barryvdh/laravel-ide-helper": "^3.1",
+        "darkaonline/l5-swagger": "^8.6",
         "dcat/laravel-admin": "2.*",
         "godruoyi/php-snowflake": "^3.0",
         "guzzlehttp/guzzle": "^7.9",
@@ -20,6 +21,7 @@
         "mosiboom/dcat-iframe-tab": "^1.2",
         "opcodesio/log-viewer": "^3.1",
         "overtrue/easy-sms": "^3.0",
+        "pstldz/dcat-admin-grid-sotrable": "^1.0",
         "pstldz/media-extension": "dev-master",
         "ramsey/uuid": "^4.7",
         "simplesoftwareio/simple-qrcode": "^4.2",
@@ -27,7 +29,8 @@
         "symfony/http-client": "^7.1",
         "symfony/mailer": "^6.4",
         "symfony/mailgun-mailer": "^7.1",
-        "tymon/jwt-auth": "^2.1"
+        "tymon/jwt-auth": "^2.1",
+        "workerman/workerman": "^5.1"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",

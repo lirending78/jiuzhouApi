@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $order_no 订单号
  * @property string $user_id 用户id
  * @property string $entrust_type 委托类型: buy买,sell卖
+ * @property string $type 类型: limit限价 , market市价
  * @property string $order_type 订单类型: DC数字货币, ETF基金, WH 外汇, CO大宗交易
  * @property string $amount 订单总数量
  * @property string $remaining_amount 订单未成交数量
@@ -74,6 +75,7 @@ class C2cOrderModel extends BaseModel
         'order_no',
         'user_id',
         'entrust_type',
+        'type',
         'order_type',
         'amount',
         'remaining_amount',

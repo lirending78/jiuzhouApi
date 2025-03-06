@@ -6,6 +6,17 @@
       0 => 'Barryvdh\\LaravelIdeHelper\\IdeHelperServiceProvider',
     ),
   ),
+  'darkaonline/l5-swagger' => 
+  array (
+    'aliases' => 
+    array (
+      'L5Swagger' => 'L5Swagger\\L5SwaggerFacade',
+    ),
+    'providers' => 
+    array (
+      0 => 'L5Swagger\\L5SwaggerServiceProvider',
+    ),
+  ),
   'dcat/laravel-admin' => 
   array (
     'providers' => 
@@ -96,6 +107,13 @@
     'aliases' => 
     array (
       'LogViewer' => 'Opcodes\\LogViewer\\Facades\\LogViewer',
+    ),
+  ),
+  'pstldz/dcat-admin-grid-sotrable' => 
+  array (
+    'providers' => 
+    array (
+      0 => 'Pstldz\\DcatAdminGridSotrable\\DcatAdminGridSotrableServiceProvider',
     ),
   ),
   'pstldz/media-extension' => 

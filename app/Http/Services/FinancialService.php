@@ -2,19 +2,18 @@
 
 namespace App\Http\Services;
 
+use App\Http\Controllers\V1\Common\ValidateController;
 use App\Http\Services\Common\SmsService;
 use App\Http\Services\Financial\Currency;
+use App\Http\Services\Financial\FinancialService as Service;
 use App\Http\Services\User\UserService;
+use App\Models\Financial\Bank;
+use App\Models\Financial\Currency as CurrencyModel;
 use App\Models\Financial\RechargeRecord;
 use App\Models\Financial\TransactionFlow;
 use App\Models\User\UserWallet;
-use App\Http\Services\Financial\FinancialService as Service;
+use App\Models\User\UserWithdrawalAddress;
 use App\Services\MarketService;
-use Illuminate\Support\Facades\DB;
-use Opcodes\LogViewer\Logs\Log;
-use Tymon\JWTAuth\Contracts\Providers\Auth;
-use App\Models\Financial\Currency as CurrencyModel;
-
 
 
 class FinancialService extends BaseService
@@ -24,16 +23,19 @@ class FinancialService extends BaseService
     //用户钱包列表
     public function WalletList($data)
     {
-        $list = UserWallet::query()
+         return UserWallet::query()
             ->where('user_id',auth()->user()->user_id)
             ->get()
             ->transform(function ($item) {
                 //折合usdt
-                $item->usdt = $item->money * (new MarketService())->getPrice($item->currency);
+                if ($item->currency == 'USDT') {
+                    $item->usdt = remove_zero_tail($item->money)  +  remove_zero_tail($item->freeze_money);
+                } else {
+                    $item->usdt = remove_zero_tail(($item->money + $item->freeze_money ) * (new MarketService())->getPrice($item->currency));
+                }
                 return $item;
             })
             ->toArray();
-        return $list;
     }
 
     //获取充值列表
@@ -231,9 +233,8 @@ class FinancialService extends BaseService
         ]);
 
         $user_id = auth()->user()->user_id;
-        $current  = $data['currency'];
-        $list = TransactionFlow::query()->where('user_id', $user_id)->orderBy('created_at')->where('currency', $current)->get()->toArray();
-        return $list;
+        $current  =  strtoupper($data['currency']);
+        return TransactionFlow::query()->where('user_id', $user_id)->orderBy('created_at')->where('currency', $current)->get()->toArray();
     }
     //币种余额
     public function CurrencyBalance($data)
@@ -253,6 +254,117 @@ class FinancialService extends BaseService
         return $wallet->money;
     }
 
+
+    //新增提现地址
+    public function AddWithdrawalAddress($data,$type = 'add')
+    {
+        //校验资金密码
+
+//        (new ValidateController())->validateFundPassword($data['pay_password']);
+
+        if($type == 'del'){
+            $data->validate([
+                'uuid' => 'required',
+            ], [
+                'uuid.required' => '请选择地址',
+            ]);
+            $model = UserWithdrawalAddress::query()->where('user_id', auth()->user()->user_id)->where('uuid', $data['uuid'])->first();
+            if($model){
+                $model->delete();
+                return true;
+            }else{
+                throw new \Exception('地址不存在');
+            }
+        }
+        $data->validate([
+            'wallet_type' => 'required',
+        ], [
+             'wallet_type.required' => '请选择类型',
+        ]);
+        if($type == 'edit'){
+            $data->validate([
+                'uuid' => 'required',
+            ], [
+                'uuid.required' => '请选择地址',
+            ]);
+        }
+        $user = auth()->user();
+        if ($type == 'edit'){
+            $model = UserWithdrawalAddress::query()->where('user_id', $user->user_id)->where('uuid', $data['uuid'])->first();
+        }else{
+            $model = new UserWithdrawalAddress();
+        }
+
+        if ($data['wallet_type'] == 'bankcard') {
+            //银行卡提现
+            if ($type != 'edit') {
+                $data->validate([
+                    'card_number' =>'unique:user_withdrawal_address,card_number'
+                    ], [
+                        'card_number.unique' => '该银行卡号已存在',
+                    ]);
+            }
+            $data->validate([
+                'card_number' => 'required',
+                'bank_name' => 'required',
+                'holder_name' => 'required',
+            ], [
+                'card_number.required' => '请输入银行卡号',
+                'card_number.unique' => '该银行卡号已存在',
+                'bank_name.required' => '请输入银行名称',
+                'holder_name.required' => '请输入持卡人姓名',
+            ]);
+
+            $checkBankNum = (new ValidateController())->validateCardNumber($data['card_number']);
+
+            if(!$checkBankNum){
+                throw new \Exception('银行卡号格式错误');
+            }
+
+            $model->user_id = $user->user_id;
+            $model->card_number = $data['card_number'];
+            $model->bank_name = $data['bank_name'];
+            $model->holder_name = $data['holder_name'];
+            $model->wallet_type = $data['wallet_type'];
+            //保存
+
+            if ($model->save()){
+                return true;
+            }else{
+                throw new \Exception('添加提现地址失败');
+            }
+        }elseif ($data['wallet_type'] == 'cryptocurrency'){
+            //币币提现
+            if ($type != 'edit') {
+                $data->validate([
+                    'wallet_address'   => 'unique:user_withdrawal_address,wallet_address',
+                ], [
+                    'wallet_address.unique'     => '该钱包地址已存在',
+                ]);
+            }
+
+            $data->validate([
+                'currency'         => 'required',
+            ], [
+                'wallet_address.required'   => '请输入钱包地址',
+                'currency.required'         => '请选择币种',
+            ]);
+            $model->user_id = $user->user_id;
+            $model->wallet_type = 'cryptocurrency';
+            $model->wallet_address = $data['wallet_address'];
+            $model->currency = $data['currency'];
+            //保存
+            if ($model->save()){
+                return true;
+            }else{
+                throw new \Exception('添加提现地址失败');
+            }
+        }else{
+            throw new \Exception('类型错误');
+        }
+
+
+    }
 
 
 

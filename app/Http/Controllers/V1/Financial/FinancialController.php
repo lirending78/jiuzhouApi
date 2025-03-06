@@ -6,6 +6,9 @@ use App\Http\Controllers\BaseController;
 use App\Http\Requests\Financial\FinancialRequest;
 use App\Http\Services\FinancialService;
 use App\Models\Financial\Currency;
+use App\Models\Financial\RechargeRecord;
+use App\Models\Financial\Withdrawal;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class FinancialController extends  BaseController
@@ -32,6 +35,25 @@ class FinancialController extends  BaseController
             $auth = new FinancialService();
             $response = $auth->RechargeList($request);
             return $this->success($response);
+        }catch (\Exception $e){
+            return $this->fail([],$e->getMessage());
+        }
+    }
+    //充值记录
+    public function RechargeRecode(FinancialRequest $request)
+    {
+        try {
+             $list = RechargeRecord::query()->orderBy('created_at')->where('user_id',auth()->user()->user_id)->get()->toArray();
+            return $this->success($list);
+        }catch (\Exception $e){
+            return $this->fail([],$e->getMessage());
+        }
+    }
+    //提现记录
+    public function WithdrawalRecord(FinancialRequest $request){
+        try {
+            $list = Withdrawal::query()->where('user_id',auth()->user()->user_id)->get()->toArray();
+            return $this->success($list);
         }catch (\Exception $e){
             return $this->fail([],$e->getMessage());
         }
@@ -136,6 +158,57 @@ class FinancialController extends  BaseController
                 return $this->fail([],'该币种暂不支持充值');
             }
             return $this->success($response);
+        } catch (\Exception $e) {
+            return $this->fail([], $e->getMessage());
+        }
+    }
+    //新增提现地址
+    public function AddWithdrawalAddress(FinancialRequest $request){
+        $lock = Cache::lock('add_withdrawal_address_' .auth()->user()->id, 3);
+
+        if (!$lock->get()) {
+            throw new \Exception('操作过于频繁，请稍后再试');
+        }
+        try {
+            $auth = new FinancialService();
+            $response = $auth->AddWithdrawalAddress($request);
+            return $this->success($response);
+        } catch (\Exception $e) {
+            return $this->fail([], $e->getMessage());
+        }
+    }
+    //编辑提现地址
+    public function EditWithdrawalAddress(FinancialRequest $request){
+        try {
+            $auth = new FinancialService();
+            $response = $auth->AddWithdrawalAddress($request,'edit');
+            return $this->success($response);
+        } catch (\Exception $e) {
+            return $this->fail([], $e->getMessage());
+        }
+    }
+    //删除提现地址
+    public function DelWithdrawalAddress(FinancialRequest $request){
+        try {
+            $auth = new FinancialService();
+            $response = $auth->AddWithdrawalAddress($request,'del');
+            return $this->success($response);
+        } catch (\Exception $e) {
+            return $this->fail([], $e->getMessage());
+        }
+    }
+
+    //提现地址列表
+    public function WithdrawalAddressList(FinancialRequest $request){
+
+        if(!$request->input('wallet_type')){
+            return $this->fail([],'参数错误');
+        }
+        $type = $request->input('wallet_type');
+        try {
+            $user_id = auth()->user()->user_id;
+            $list = \App\Models\User\UserWithdrawalAddress::query()->where('user_id', $user_id)->where('wallet_type',$type)->get()->toArray();
+            return $this->success($list);
         } catch (\Exception $e) {
             return $this->fail([], $e->getMessage());
         }

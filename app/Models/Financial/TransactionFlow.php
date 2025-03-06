@@ -16,4 +16,13 @@ class TransactionFlow extends BaseModel
     protected $table = 'transaction_flow';
 
     protected $primaryKey = 'uuid';
+
+    public function getAmountAttribute($value)
+    {
+        return remove_zero_tail($value);
+    }
+    public function getFreezeMoneyAttribute($value)
+    {
+        return remove_zero_tail($value);
+    }
 }

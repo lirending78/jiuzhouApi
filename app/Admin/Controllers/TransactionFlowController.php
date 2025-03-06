@@ -19,15 +19,22 @@ class TransactionFlowController extends AdminController
     {
         return Grid::make(new TransactionFlow(), function (Grid $grid) {
             $grid->column('user_id')->limit(5);
-            $grid->column('transaction_no');
-            $grid->column('amount');
-            $grid->column('currency');
+            $grid->model()->orderBy('created_at', 'desc');
+            $grid->column('transaction_no')->limit(10);
+            //保留两位小数
+            $grid->column('amount')->display(function ($value) {
+                return number_format($value, 2);
+            });
+            $grid->column('currency')->label();
             //充值：deposit  提现：withdrawal    购买：purchase
-            $grid->column('transaction_type')->using(['deposit' => '充值', 'withdrawal' => '提现', 'purchase' => '购买'])->label(['deposit' => 'success', 'withdrawal' => 'danger', 'purchase' => 'primary']);
+            $grid->column('transaction_type')->using(['deposit' => '充值', 'withdrawal' => '提现', 'c2c_order' => '币币交易'])->label();
 //           pending 已处理
             $grid->column('status')->using(['pending' => '待处理','completed'=>'成功'])->label(['pending' => 'orange','completed'=>'success']);
+            $grid->column('after_money','变更后余额')->display(function ($value) {
+                return number_format($value, 2);
+            });
 //           Manual recharge ：人工充值
-            $grid->column('payment_method')->using(['Manual recharge' => '人工审核'])->label(['Manual recharge' => 'success']);
+//            $grid->column('payment_method')->using(['Manual recharge' => '人工审核'])->label(['Manual recharge' => 'success']);
             $grid->column('created_at');
             $grid->column('updated_at')->sortable();
             $grid->disableCreateButton();

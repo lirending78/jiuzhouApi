@@ -5,8 +5,10 @@ namespace App\Http\Services\Orders;
 use App\Admin\Repositories\TradesOrder;
 use App\Cache\User\OauthCache;
 use App\Http\Services\BaseService;
+use App\Http\Services\Financial\FinancialService;
 use App\Jobs\ProcessMatchingJob;
 use App\Models\Order\C2cOrderModel;
+use App\Services\MarketService;
 use App\Utils\ArrayFilter;
 use Exception;
 use Illuminate\Support\Facades\DB;
@@ -29,10 +31,31 @@ class OrdersService extends BaseService
 //        $remaining_amount = $request->get('remaining_amount');
 //        $total_price = $request->get('total_price');
         $unit_price = $request->get('unit_price');
+
+        if (strpos($currency, '/')!== false) {
+            if($entrust_type === 'buy'){
+                //要冻结的币种
+                $price_currency = explode('/', $currency)[1];
+                //所需余额
+                $required_money = $unit_price * $amount;
+            }else{
+                $price_currency = explode('/', $currency)[0];
+                $required_money =  $amount;
+            }
+        }else{
+            throw new \Exception("错误的币种");
+        }
+        // 检查余额
+        $check_money = (new FinancialService())->CheckCurrencyMoney($price_currency, $required_money);
+        if (!$check_money) {
+            throw new \Exception("余额不足");
+        }
+        DB::beginTransaction();
         // 创建委托订单
         $insert = [
             'order_no' => order_no(),
             'user_id' => $userId,
+            'type' => 'limit',
             'entrust_type' => $entrust_type,
             'order_type' => 'DC',
             'amount' => $amount,
@@ -46,7 +69,14 @@ class OrdersService extends BaseService
         ];
         $timeScore = now()->timestamp;
         $order = C2cOrderModel::create($insert);
-            // 根据委托类型设置分数计算逻辑
+        //冻结金额
+        try {
+            (new FinancialService())->ChangeUserMoney($userId,$price_currency, $required_money, $order['order_no'], 'freeze', 'c2c_order');
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw new \Exception("Failed to reduce user money: " . $e->getMessage());
+        }
+        // 根据委托类型设置分数计算逻辑
         if ($entrust_type === 'buy') {
             // 买单：价格从高到低，价格相同时按时间升序
             $priceScore = $insert['unit_price'] * 1e6; // 放大价格作为主权重
@@ -62,7 +92,9 @@ class OrdersService extends BaseService
         try {
             Redis::zAdd("c2c_orders:{$entrust_type}:{$order['currency']}", $score, $order->order_no);
             Redis::hSet(ORDER_INVENTORY, $order['order_no'], $order['remaining_amount']);
+            DB::commit();
         }catch (Exception $e){
+            DB::rollBack();
             throw new \Exception("Failed to add order to Redis: " . $e->getMessage());
         }
 
@@ -131,22 +163,37 @@ class OrdersService extends BaseService
      */
     public function cancelOrder($orderId)
     {
-        $order = C2cOrderModel::find($orderId);
-
-        if (!$order || $order->status === 'completed') {
+        $order = C2cOrderModel::query()->where('order_no',$orderId)->firstOrFail();
+        if (!$order || $order->pay_status != 0) {
             throw new \Exception("Cannot cancel an already completed or non-existent order.");
         }
 
         DB::beginTransaction();
 
         try {
-            // 回滚该订单的部分成交量
-            $order->remaining_amount = $order->amount;
-            $order->status = 'canceled';
-            $order->save();
+            if ($order->entrust_type == 'buy') {
+                // 买单：解冻资金
+                $orderKey = BUY_ORDER_KEY;
+                $currency = explode('/', $order->currency)[1];
+                $amount = $order->total_price;
+                (new FinancialService())->ChangeUserMoney($order->user_id, $currency, $amount, $order->order_no, 'cancel_freeze', 'c2c_order');
+            } else if ($order->entrust_type =='sell') {
+                // 卖单：解冻资金
+                $orderKey = SELL_ORDER_KEY;
+                $currency = explode('/', $order->currency)[0];
+                $amount = $order->amount;
+                (new FinancialService())->ChangeUserMoney($order->user_id, $currency, $amount, $order->order_no, 'cancel_freeze', 'c2c_order');
+            }
+            //解冻资金
 
-            // 移除 Redis 中的该订单
-            Redis::zrem("orders:{$order->type}", $order->id);
+            //更新订单状态
+            C2cOrderModel::query()->where('order_no', $orderId)->update(['pay_status' => 3]);
+
+            Redis::zRem("$orderKey:$order->currency", $order->order_no);
+            Redis::hDel(ORDER_INVENTORY, $order->order_no);
+            // 删除缓存中的订单信息
+            Redis::hDel(ORDER_INFO_KEY, $order->order_no);
+
 
             DB::commit();
         } catch (\Exception $e) {
@@ -155,4 +202,113 @@ class OrdersService extends BaseService
             throw $e;
         }
     }
+
+
+    //市价交易买入
+    public function marketTradeBuy($request)
+    {
+        DB::beginTransaction();
+        try {
+            $symbol = $request->get('currency');
+            $price_currency = explode('/', $symbol)[1];
+            $money = $request->get('amount');
+            //校验余额
+            $check_money = (new FinancialService())->CheckCurrencyMoney($price_currency, $money);
+            if (!$check_money) {
+                throw new \Exception("余额不足");
+            }
+            //获取当前市场价格
+            $market_price = (new MarketService())->getPrice(explode('/', $symbol)[0], explode('/', $symbol)[1]);
+            //计算买入币的量
+            $buy_num = sprintf("%.8f", ($money / $market_price));
+            //计算手续费
+            $fee = 0;
+            //实际到账号的币量
+            $real_num = $buy_num - $fee;
+            //生成交易记录
+            // 创建委托订单
+            $insert = [
+                'order_no' => order_no(),
+                'user_id' => auth()->user()->user_id,
+                'type' => 'market',
+                'entrust_type' => 'buy',
+                'order_type' => 'DC',
+                'amount' => $real_num,
+                'remaining_amount' => 0,
+                //总花费
+                'total_price' => $money,
+                'unit_price' => $market_price,
+                'currency' => request('currency'),
+                'currency_ratio' => '0.2',
+                'pay_type' => 1,
+                'pay_status' => 2,
+            ];
+            $order = C2cOrderModel::create($insert);
+            //扣除消费资金
+            (new FinancialService())->ChangeUserMoney(auth()->user()->user_id, explode('/', $symbol)[1], $money, $order['order_no'], 'reduce', 'c2c_order');
+            //增加购买的币种
+            (new FinancialService())->ChangeUserMoney(auth()->user()->user_id, explode('/', $symbol)[0], $real_num, $order['order_no'], 'add', 'c2c_order');
+
+        }catch (Exception $e){
+            DB::rollBack();
+            throw new \Exception("Failed to create order: " . $e->getMessage());
+        }
+        DB::commit();
+    }
+
+    //市价交易卖出
+    public function marketTradeSell($request)
+    {
+        DB::beginTransaction();
+      try {
+        $symbol = $request->get('currency');
+        $price_currency = explode('/', $symbol)[0];
+        $money = $request->get('amount');
+        //校验余额
+        $check_money = (new FinancialService())->CheckCurrencyMoney($price_currency, $money);
+        if (!$check_money) {
+            throw new \Exception("余额不足");
+        }
+        //获取当前市场价格
+        $market_price = (new MarketService())->getPrice(explode('/', $symbol)[0], explode('/', $symbol)[1]);
+        //计算卖出币的量
+        $buy_num = $money * $market_price;
+        //计算手续费
+        $fee = 0;
+        //实际到账号的币量
+        $real_num = $buy_num - $fee;
+        //生成交易记录
+        // 创建委托订单
+        $insert = [
+            'order_no' => order_no(),
+            'user_id' => auth()->user()->user_id,
+            'type' => 'market',
+            'entrust_type' => 'sell',
+            'order_type' => 'DC',
+            'amount' => $money,
+            'remaining_amount' => 0,
+            //总花费
+            'total_price' => $money,
+            'unit_price' => $market_price,
+            'currency' => request('currency'),
+            'currency_ratio' => '0.2',
+            'pay_type' => 1,
+            'pay_status' => 2,
+        ];
+        $order = C2cOrderModel::create($insert);
+        //扣除消费资金
+        (new FinancialService())->ChangeUserMoney(auth()->user()->user_id, explode('/', $symbol)[0], $money, $order['order_no'], 'reduce', 'c2c_order');
+        //增加购买的币种
+        (new FinancialService())->ChangeUserMoney(auth()->user()->user_id, explode('/', $symbol)[1], $real_num, $order['order_no'], 'add', 'c2c_order');
+
+        }catch (Exception $e){
+            DB::rollBack();
+            throw new \Exception($e->getMessage());
+        }
+
+        DB::commit();
+
+    }
+
+
 }

@@ -7,6 +7,7 @@ use App\Admin\Actions\Agent\OpenAgent;
 use App\Admin\Actions\UserSetting;
 use App\Admin\Renderable\NetWork;
 use App\Admin\Renderable\UserWallet;
+use App\Admin\Renderable\UserWithdrawalAddress as UserWithdrawalList;
 use App\Admin\Repositories\User;
 use App\Http\Services\User\UserService;
 use App\Models\User\User as UserModel;
@@ -21,7 +22,6 @@ use Dcat\Admin\Widgets\Modal;
 class UserController extends AdminController
 {
 
-    public array $vip_level = [0 => '普通用户', 1 => 'VIP', 2 => 'SVIP', 3 => '超级VIP'];
 
     /**
      * Make a grid builder.
@@ -45,6 +45,15 @@ class UserController extends AdminController
             $grid->column('user_name');
             $grid->column('real_name');
             $grid->column('status')->switch();
+            $grid->column('withdraw_address', '提现地址')->display(function () {
+                $name = $this->user_name ?? $this->user_mail;
+                return Modal::make()
+                    ->lg() // 设置模态窗大小
+                    ->xl()
+                    ->title(" {$name} 的提现地址") // 动态设置模态窗标题
+                    ->body(UserWithdrawalList::make()->payload(['user_id' => $this->user_id])) // 将供应商 ID 传递给 LazyRenderable
+                    ->button("<button class='btn btn-primary btn-sm'>查看</button>");
+            });
             $grid->column('user_recom')->display(function () {
                 return UserModel::query()->where('user_id', $this->user_recom)->value('user_name');
             })->help('点击查看推荐网络')->modal(function ($modal) {

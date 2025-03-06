@@ -7,14 +7,18 @@ use App\Http\Requests\User\Member\MemberRequest;
 use App\Http\Services\AuthService;
 use App\Http\Services\FinancialService;
 use App\Http\Services\User\UserService;
+use Illuminate\Support\Facades\Redis;
 
 class AuthController extends BaseController
 {
 
-
     //获取用户信息
     public function getUserInfo(MemberRequest $request)
     {
+
+//        $price = Redis::get("huobi:BTCUSDT");
+//        dd($price);
+
         try {
             $auth = new AuthService();
             $response = $auth->getUserInfo($request);

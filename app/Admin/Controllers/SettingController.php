@@ -68,10 +68,10 @@ class SettingController extends AdminController
                 $form->switch('is_ssl','ssl')->default(1)->help('465端口一般为SSL加密，587端口一般为TLS加密')->setLabelClass(['asterisk'])->default((new Setting)->getValue('is_ssl'));
                 $form->html(new CheckEmail())->help('将会向你的邮箱发送一封测试邮件');
             });
-//            $form->tab('短信SMS设置',function (Form $form){
-//
-//
-//            });
+            $form->tab('撮合设置',function (Form $form){
+                $form->radio('c2c_type','交易类型')->options(['1' => '平台交易', '2' => '个人交易'])->default((new Setting)->getValue('c2c_type'));
+
+            });
 //            $form->tab('用户设置', function (Form $form) {
 //
 //            });

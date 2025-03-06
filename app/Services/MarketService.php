@@ -11865,7 +11865,6 @@ class MarketService
         }
         return '0.00000000';
 
-
     }
 
 }
